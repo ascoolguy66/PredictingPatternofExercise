@@ -93,7 +93,6 @@ Building a decision tree model based on the training dataset
 ``` {r ,warnings = FALSE}
 set.seed(101)
 modFitDecTree <- rpart(classe ~ ., data=TrainSet, method="class")
-fancyRpartPlot(modFitDecTree)
 ```
 
 Confusion Matrix and Statistics
