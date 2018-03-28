@@ -1,5 +1,5 @@
 # Predicting Pattern of Exercise
-Predicting Pattern of Exercise using Machine Learning Techniques
+<b> Predicting Pattern of Exercise using Machine Learning Techniques </b>
 
 In this project, we will use data collected from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
 
