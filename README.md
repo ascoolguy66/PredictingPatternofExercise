@@ -9,3 +9,5 @@ This project aims to predict in which manner participants completed a single exe
 * Lifting the dumbbell only halfway (Class C);
 * Lowering the dumbbell only halfway (Class D); and
 * Throwing the hips to the front (Class E).
+
+<b> Please open results.rmd or results.html to view the results. </b>
