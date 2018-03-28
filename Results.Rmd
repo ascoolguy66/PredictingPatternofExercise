@@ -104,13 +104,6 @@ confMatDecTree <- confusionMatrix(predictDecTree, ValSet$classe)
 confMatDecTree
 ```
 
-Plot matrix results
-``` {r}
-# plot matrix results
-plot(confMatDecTree$table, col = confMatDecTree$byClass, 
-     main = paste("Decision Tree - Accuracy =",
-                  round(confMatDecTree$overall['Accuracy'], 4)))
-```
 
 ### Method 02: Generalized Boosted Model
 
@@ -130,13 +123,6 @@ Confusion Matrix and Statistics
 predictGBM <- predict(modFitGBM, newdata=ValSet)
 confMatGBM <- confusionMatrix(predictGBM, ValSet$classe)
 confMatGBM
-```
-
-Plot matrix results
-``` {r}
-# plot matrix results
-plot(confMatGBM$table, col = confMatGBM$byClass, 
-     main = paste("GBM - Accuracy =", round(confMatGBM$overall['Accuracy'], 4)))
 ```
 
 
@@ -160,13 +146,6 @@ confMatRandForest <- confusionMatrix(predictRandForest, ValSet$classe)
 confMatRandForest
 ```
 
-Plot matrix results
-``` {r}
-# plot matrix results
-plot(confMatRandForest$table, col = confMatRandForest$byClass, 
-     main = paste("Random Forest - Accuracy =",
-                  round(confMatRandForest$overall['Accuracy'], 4)))
-```
 
 ## Predicting the outcome on the test dataset using the best model
 The accuracy on test dataset of the three modeling methods are:
