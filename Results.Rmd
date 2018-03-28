@@ -1,0 +1,184 @@
+# Predicting Pattern of Exercise based on Machine Learning Techniques
+### Author: Veer Abhimanyu Singh
+#### Date: 28th March, 2018
+
+## Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.
+
+Measurements were taken using four 9 degrees of freedom Razor inertial measurement units (IMU), which were attached to the participant's chest, upper arm and forearm (glove) and the dumbbell (Figure 1). To build the study features from these devices, the authors of the study used a sliding window approach with different lengths from 0.5 second to 2.5 seconds, with 0.5 second overlap. In each step of the sliding window approach they calculated features on the Euler angles (roll, pitch and yaw), as well as the raw accelerometer, gyroscope and magnetometer readings. For the Euler angles of each of the four sensors they calculated eight features: mean, variance, standard deviation, max, min, amplitude, kurtosis and skewness.
+
+## Problem Statement/Goal
+In this project, we will use data collected from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+This project aims to predict in which manner participants completed a single exercise, based on recordings provided by accelerometers attached to 4 measurement points on the body. Six male participants aged 20-28 were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in one correct, and 4 incorrect fashions. Specifically, the exercises were performed:
+* Exactly according to the specification (Class A);
+* Throwing elbows to the front (Class B);
+* Lifting the dumbbell only halfway (Class C);
+* Lowering the dumbbell only halfway (Class D); and
+* Throwing the hips to the front (Class E).
+
+## Data Preparation and Exploratory Data Analysis
+### Data Overview
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+### Download and Clean Data
+
+```{r}
+# Load Libraries
+library(knitr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+library(corrplot)
+library(gbm)
+library(DMwR)
+
+# set the URL for the download
+UrlTrain <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+UrlTest  <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+# download the datasets
+training <- read.csv(url(UrlTrain))
+testing  <- read.csv(url(UrlTest))
+
+# create a partition with the training dataset into training and validation datasets
+# set seed
+set.seed(101)
+inTrain  <- createDataPartition(training$classe, p=0.7, list=FALSE)
+TrainSet <- training[inTrain, ]
+ValSet  <- training[-inTrain, ]
+
+# remove variables with Nearly Zero Variance
+NZV <- nearZeroVar(TrainSet)
+TrainSet <- TrainSet[, -NZV]
+ValSet  <- ValSet[, -NZV]
+
+# remove identification only variables (columns 1 to 5)
+TrainSet <- TrainSet[, -(1:5)]
+ValSet  <- ValSet[, -(1:5)]
+
+# remove variables that are mostly NA
+AllNA    <- sapply(TrainSet, function(x) mean(is.na(x))) > 0.95
+TrainSet <- TrainSet[, AllNA==FALSE]
+ValSet  <- ValSet[, AllNA==FALSE]
+
+# Missing value imputation using k-nearset neighbour method
+TrainSet <- knnImputation(TrainSet, k = 10, scale = T, meth = "weighAvg", distData = NULL)
+ValSet <- knnImputation(ValSet, k = 10, scale = T, meth = "weighAvg", distData = NULL)
+```
+
+### Correlation Analysis
+``` {r}
+# correlation matrix
+corMatrix <- cor(TrainSet[, -54])
+corrplot(corMatrix, order = "FPC", method = "color", type = "lower", 
+         tl.cex = 0.8, tl.col = rgb(0, 0, 0))
+```
+There are only a few correlated variables, therefore not dropping any variable for now.
+
+## Predictive Model Building
+### Method 01: Decision Trees
+
+Building a decision tree model based on the training dataset
+``` {r ,warnings = FALSE}
+set.seed(101)
+modFitDecTree <- rpart(classe ~ ., data=TrainSet, method="class")
+fancyRpartPlot(modFitDecTree)
+```
+
+Confusion Matrix and Statistics
+``` {r}
+# prediction on Validation dataset
+predictDecTree <- predict(modFitDecTree, newdata=ValSet, type="class",na.action = na.pass)
+confMatDecTree <- confusionMatrix(predictDecTree, ValSet$classe)
+confMatDecTree
+```
+
+Plot matrix results
+``` {r}
+# plot matrix results
+plot(confMatDecTree$table, col = confMatDecTree$byClass, 
+     main = paste("Decision Tree - Accuracy =",
+                  round(confMatDecTree$overall['Accuracy'], 4)))
+```
+
+### Method 02: Generalized Boosted Model
+
+Building a Generalized Boosted model based on the training dataset
+``` {r}
+# model fit
+set.seed(101)
+controlGBM <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+modFitGBM  <- train(classe ~ ., data=TrainSet, method = "gbm",
+                    trControl = controlGBM, verbose = FALSE)
+modFitGBM$finalModel
+```
+
+Confusion Matrix and Statistics
+``` {r}
+# prediction on Validation dataset
+predictGBM <- predict(modFitGBM, newdata=ValSet)
+confMatGBM <- confusionMatrix(predictGBM, ValSet$classe)
+confMatGBM
+```
+
+Plot matrix results
+``` {r}
+# plot matrix results
+plot(confMatGBM$table, col = confMatGBM$byClass, 
+     main = paste("GBM - Accuracy =", round(confMatGBM$overall['Accuracy'], 4)))
+```
+
+
+### Method 03: Random Forest Model
+
+Building a Random Forest model based on the training dataset
+``` {r}
+# model fit
+set.seed(101)
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modFitRandForest <- train(classe ~ ., data=TrainSet, method="rf",
+                          trControl=controlRF)
+modFitRandForest$finalModel
+```
+
+Confusion Matrix and Statistics
+``` {r}
+# prediction on Validation dataset
+predictRandForest <- predict(modFitRandForest, newdata=ValSet)
+confMatRandForest <- confusionMatrix(predictRandForest, ValSet$classe)
+confMatRandForest
+```
+
+Plot matrix results
+``` {r}
+# plot matrix results
+plot(confMatRandForest$table, col = confMatRandForest$byClass, 
+     main = paste("Random Forest - Accuracy =",
+                  round(confMatRandForest$overall['Accuracy'], 4)))
+```
+
+## Predicting the outcome on the test dataset using the best model
+The accuracy on test dataset of the three modeling methods are:
+*Decision Tree : 0.7278
+*GBM : 0.9878
+*Random Forest : 0.9978
+
+Therefore, applying the best model (Random Forest Model) to predict the 20 cases in testing dataset:
+```{r}
+# Make prediction on test dataset
+predictTEST <- predict(modFitRandForest, newdata=testing)
+predictTEST
+```
+
+
